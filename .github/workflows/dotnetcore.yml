@@ -22,10 +22,10 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Begin Sonar Scanner
-      run: dotnet sonarscanner begin /k:ahoka_Lighthouse /v:${GITHUB_SHA}
+      run: dotnet sonarscanner begin /key:ahoka_Lighthouse /version:${GITHUB_SHA} /d:sonar.host.url=https://sonarcloud.io /d:sonar.login=${secrets.SONAR_TOKEN}
     - name: Build
       run: dotnet build --configuration Release --no-restore
     - name: Test
       run: dotnet test --no-restore --verbosity normal
     - name: End Sonar Scanner
-      run: dotnet sonarscanner end
+      run: dotnet sonarscanner end /d:sonar.login=${secrets.SONAR_TOKEN}
