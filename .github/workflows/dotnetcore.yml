@@ -25,6 +25,7 @@ jobs:
       run: dotnet sonarscanner begin /key:ahoka_Lighthouse /version:${GITHUB_SHA} /d:sonar.host.url=https://sonarcloud.io /d:sonar.login=${SONAR_TOKEN}
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      continue-on-error: true
     - name: Build
       run: dotnet build --configuration Release --no-restore
     - name: Test
@@ -33,3 +34,4 @@ jobs:
       run: dotnet sonarscanner end /d:sonar.login=${SONAR_TOKEN}
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      continue-on-error: true
