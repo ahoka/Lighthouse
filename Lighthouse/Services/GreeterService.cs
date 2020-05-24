@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Lighthouse
 {
-    public class GreeterService : Greeter.GreeterBase
+    public class GreeterService : Raft.RaftBase
     {
         private readonly ILogger<GreeterService> _logger;
         public GreeterService(ILogger<GreeterService> logger)
@@ -15,12 +15,19 @@ namespace Lighthouse
             _logger = logger;
         }
 
-        public override Task<HelloReply> SayHello(HelloRequest request, ServerCallContext context)
+        public override Task<RequestVoteReply> RequestVote(RequestVoteRequest request, ServerCallContext context)
         {
-            return Task.FromResult(new HelloReply
-            {
-                Message = "Hello " + request.Name
-            });
+            return base.RequestVote(request, context);
+        }
+
+        public override Task<AppendEntriesReply> AppendEntries(AppendEntriesRequest request, ServerCallContext context)
+        {
+            return base.AppendEntries(request, context);
+        }
+
+        public override Task<InstallSnapshotReply> InstallSnapshot(InstallSnapshotRequest request, ServerCallContext context)
+        {
+            return base.InstallSnapshot(request, context);
         }
     }
 }

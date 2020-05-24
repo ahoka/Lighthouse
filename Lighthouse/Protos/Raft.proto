@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+option csharp_namespace = "Lighthouse";
+
+//package Raft;
+
+service Raft {
+  rpc RequestVote (RequestVoteRequest) returns (RequestVoteReply);
+  rpc AppendEntries (AppendEntriesRequest) returns (AppendEntriesReply);
+  rpc InstallSnapshot (InstallSnapshotRequest) returns (InstallSnapshotReply);
+}
+
+message NodeID {
+    string value = 1;
+}
+
+message Term {
+    uint64 value = 1;
+}
+
+message LogIndex {
+    uint64 value = 1;
+}
+
+message RequestVoteRequest {
+    Term term = 1; // candidate’s term
+    NodeID candidateId = 2; // candidate requesting vote
+    LogIndex lastLogIndex = 3; // index of candidate’s last log entry (§5.4)
+    Term lastLogTerm = 4; // term of candidate’s last log entry (§5.4)
+}
+
+message RequestVoteReply {
+  Term term = 1; // currentTerm, for candidate to update itself
+  bool voteGranted = 2; // true means candidate received vote
+}
+
+message AppendEntriesRequest {
+
+}
+
+message AppendEntriesReply {
+
+}
+
+message InstallSnapshotRequest {
+
+}
+
+message InstallSnapshotReply {
+
+}
