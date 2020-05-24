@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Begin Sonar Scanner
-      run: dotnet sonarscanner begin
+      run: dotnet sonarscanner begin /k:ahoka_Lighthouse /v:${GITHUB_SHA}
     - name: Build
       run: dotnet build --configuration Release --no-restore
     - name: Test
