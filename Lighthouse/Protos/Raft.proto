@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option csharp_namespace = "Lighthouse";
+option csharp_namespace = "Lighthouse.Protocol";
 
 //package Raft;
 

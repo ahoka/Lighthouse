@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Lighthouse
 {
-    public class RaftService : Raft.RaftBase
+    public class RaftService : Protocol.Raft.RaftBase
     {
         private readonly ILogger<RaftService> _logger;
         public RaftService(ILogger<RaftService> logger)
@@ -17,7 +17,7 @@ namespace Lighthouse
 
         // 1.  Reply false if term < currentTerm (§5.1)
         // 2.  If votedFor is null or candidateId, and candidate’s log is atleast as up-to-date as receiver’s log, grant vote (§5.2, §5.4)
-        public override Task<RequestVoteReply> RequestVote(RequestVoteRequest request, ServerCallContext context)
+        public override Task<Protocol.RequestVoteReply> RequestVote(Protocol.RequestVoteRequest request, ServerCallContext context)
         {
             return base.RequestVote(request, context);
         }
@@ -27,7 +27,7 @@ namespace Lighthouse
         // 3.  If an existing entry conflicts with a new one (same indexbut different terms), delete the existing entry and all thatfollow it (§5.3)
         // 4.  Append any new entries not already in the log
         // 5.  If leaderCommit > commitIndex, set commitIndex =min(leaderCommit, index of last new entry)
-        public override Task<AppendEntriesReply> AppendEntries(AppendEntriesRequest request, ServerCallContext context)
+        public override Task<Protocol.AppendEntriesReply> AppendEntries(Protocol.AppendEntriesRequest request, ServerCallContext context)
         {
             return base.AppendEntries(request, context);
         }
@@ -40,7 +40,7 @@ namespace Lighthouse
         // 6.  If existing log entry has same index and term as snapshot’slast included entry, retain log entries following it and reply
         // 7.  Discard the entire log
         // 8.  Reset state machine using snapshot contents (and loadsnapshot’s cluster configuration)
-        public override Task<InstallSnapshotReply> InstallSnapshot(InstallSnapshotRequest request, ServerCallContext context)
+        public override Task<Protocol.InstallSnapshotReply> InstallSnapshot(Protocol.InstallSnapshotRequest request, ServerCallContext context)
         {
             return base.InstallSnapshot(request, context);
         }
