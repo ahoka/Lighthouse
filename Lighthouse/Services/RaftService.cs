@@ -7,10 +7,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Lighthouse
 {
-    public class GreeterService : Raft.RaftBase
+    public class RaftService : Raft.RaftBase
     {
-        private readonly ILogger<GreeterService> _logger;
-        public GreeterService(ILogger<GreeterService> logger)
+        private readonly ILogger<RaftService> _logger;
+        public RaftService(ILogger<RaftService> logger)
         {
             _logger = logger;
         }

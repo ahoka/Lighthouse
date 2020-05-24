@@ -31,7 +31,7 @@ namespace Lighthouse
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<GreeterService>();
+                endpoints.MapGrpcService<RaftService>();
 
                 endpoints.MapGet("/", async context =>
                 {
