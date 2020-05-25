@@ -20,19 +20,24 @@ namespace Lighthouse
             Node = node;
         }
 
-        // 1.  Reply false if term < currentTerm (§5.1)
-        // 2.  If votedFor is null or candidateId, and candidate’s log is atleast as up-to-date as receiver’s log, grant vote (§5.2, §5.4)
         public override Task<Protocol.RequestVoteReply> RequestVote(Protocol.RequestVoteRequest request, ServerCallContext context)
         {
+            // Reply false if term < currentTerm(§5.1)
             if (Node.PersistentState.CurrentTerm > request.Term)
             {
                 return Task.FromResult(new Protocol.RequestVoteReply()
                 {
                     Term = Node.PersistentState.CurrentTerm,
                     VoteGranted = false
-                }); 
+                });
+            }
+            else if (Node.PersistentState.CurrentTerm < request.Term)
+            {
+                Node.PersistentState.CurrentTerm = request.Term;
+                Node.Role = Role.Follower;
             }
 
+            // If votedFor is null or candidateId, and candidate’s log is atleast as up-to-date as receiver’s log, grant vote (§5.2, §5.4)
             if (Node.PersistentState.VotedFor == null || Node.PersistentState.VotedFor == new Guid(request.CandidateId))
             {
                 // Raft determines which of two logs is more up-to-date by comparing the index and term of the last entries in the
@@ -49,15 +54,13 @@ namespace Lighthouse
                         VoteGranted = true
                     });
                 }
-                else
-                {
-                    return Task.FromResult(new Protocol.RequestVoteReply()
-                    {
-                        Term = request.Term,
-                        VoteGranted = false
-                    });
-                }
             }
+
+            return Task.FromResult(new Protocol.RequestVoteReply()
+            {
+                Term = request.Term,
+                VoteGranted = false
+            });
         }
 
         // 1.  Reply false if term < currentTerm (§5.1)
