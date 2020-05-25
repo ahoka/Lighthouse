@@ -8,10 +8,10 @@ namespace Lighthouse.State
     public class VolatileState
     {
         // index of highest log entry known to be committed (initialized to 0, increases monotonically)
-        public LogIndex CommitIndex { get; set; }
+        public ulong CommitIndex { get; set; }
 
         // index of highest log entry applied to statemachine (initialized to 0, increases monotonically)
-        public LogIndex LastApplied { get; set; }
+        public ulong LastApplied { get; set; }
 
         public VolatileState()
         {

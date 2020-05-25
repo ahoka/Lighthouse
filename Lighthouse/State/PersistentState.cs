@@ -10,16 +10,16 @@ namespace Lighthouse.State
     {
         public PersistentState()
         {
-            CurrentTerm = new Term(0);
+            CurrentTerm = 0;
             VotedFor = null;
             Log = new List<LogEntry>();
         }
 
         // latest term server has seen (initialized to 0 on first boot, increases monotonically)
-        public Term CurrentTerm { get; set; } 
+        public ulong CurrentTerm { get; set; } 
         
         // candidate Id that received vote in currentterm(or null if none)
-        public NodeId VotedFor { get; set; }
+        public Guid? VotedFor { get; set; }
         
         // log entries; each entry contains command for state machine, and term when entry was received by leader (first index is 1)
         public IList<LogEntry> Log { get; set; }

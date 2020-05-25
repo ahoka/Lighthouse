@@ -2,11 +2,11 @@
 {
     public class LogEntry
     {
-        public LogEntry(Term term)
+        public LogEntry(ulong term)
         {
             Term = term;
         }
 
-        public Term Term { get; }
+        public ulong Term { get; }
     }
 }
