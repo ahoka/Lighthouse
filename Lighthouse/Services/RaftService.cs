@@ -64,13 +64,36 @@ namespace Lighthouse
         }
 
         // 1.  Reply false if term < currentTerm (§5.1)
-        // 2.  Reply false if log doesn’t contain an entry at prevLogIndexwhose term matches prevLogTerm (§5.3)
-        // 3.  If an existing entry conflicts with a new one (same indexbut different terms), delete the existing entry and all thatfollow it (§5.3)
+        // 2.  Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (§5.3)
+        // 3.  If an existing entry conflicts with a new one (same index but different terms),
+        //     delete the existing entry and all that follow it (§5.3)
         // 4.  Append any new entries not already in the log
         // 5.  If leaderCommit > commitIndex, set commitIndex =min(leaderCommit, index of last new entry)
         public override Task<Protocol.AppendEntriesReply> AppendEntries(Protocol.AppendEntriesRequest request, ServerCallContext context)
         {
-            return base.AppendEntries(request, context);
+            if (Node.PersistentState.CurrentTerm > request.Term)
+            {
+                return Task.FromResult(new Protocol.AppendEntriesReply
+                {
+                    Term = Node.PersistentState.CurrentTerm,
+                    Success = false
+                });
+            }
+            else if (Node.PersistentState.CurrentTerm < request.Term)
+            {
+                Node.PersistentState.CurrentTerm = request.Term;
+                Node.Role = Role.Follower;
+            }
+
+            var prevLog = Node.PersistentState.Log.ElementAtOrDefault((int)request.PrevLogIndex);
+            if (prevLog != null && prevLog.Term != request.PrevLogTerm)
+            {
+                return Task.FromResult(new Protocol.AppendEntriesReply
+                {
+                    Term = Node.PersistentState.CurrentTerm,
+                    Success = false
+                });
+            }
         }
 
         // 1.  Reply immediately if term < currentTerm

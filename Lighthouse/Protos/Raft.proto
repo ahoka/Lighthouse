@@ -11,7 +11,8 @@ service Raft {
 }
 
 message LogEntry {
-
+    uint64 term = 1;
+    uint64 index = 2;
 }
 
 message RequestVoteRequest {
