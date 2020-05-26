@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Begin Sonar Scanner
-      run: dotnet sonarscanner begin /key:ahoka_Lighthouse /version:${GITHUB_SHA} /d:sonar.host.url=https://sonarcloud.io /d:sonar.login=${SONAR_TOKEN}
+      run: dotnet sonarscanner begin /key:ahoka_Lighthouse /version:${GITHUB_SHA} /d:sonar.host.url=https://sonarcloud.io /d:sonar.organization=ahoka /d:sonar.login=${SONAR_TOKEN}
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       continue-on-error: true
