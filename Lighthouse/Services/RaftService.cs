@@ -60,14 +60,12 @@ namespace Lighthouse
                     });
                 }
             }
-            else
+            
+            return Task.FromResult(new Protocol.RequestVoteReply()
             {
-                return Task.FromResult(new Protocol.RequestVoteReply()
-                {
-                    Term = request.Term,
-                    VoteGranted = false
-                });
-            }
+                Term = request.Term,
+                VoteGranted = false
+            });
         }
 
         // 1.  Reply false if term < currentTerm (§5.1)
