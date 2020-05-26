@@ -12,7 +12,7 @@ namespace Lighthouse.State
         {
             CurrentTerm = 0;
             VotedFor = null;
-            Log = new List<LogEntry>();
+            Log = new Log();
         }
 
         // latest term server has seen (initialized to 0 on first boot, increases monotonically)
@@ -22,6 +22,6 @@ namespace Lighthouse.State
         public Guid? VotedFor { get; set; }
         
         // log entries; each entry contains command for state machine, and term when entry was received by leader (first index is 1)
-        public IList<LogEntry> Log { get; set; }
+        public Log Log { get; set; }
     }
 }

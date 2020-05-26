@@ -23,6 +23,7 @@ namespace Lighthouse
         public override Task<Protocol.RequestVoteReply> RequestVote(Protocol.RequestVoteRequest request, ServerCallContext context)
         {
             // Reply false if term < currentTerm(§5.1)
+            //
             if (Node.PersistentState.CurrentTerm > request.Term)
             {
                 return Task.FromResult(new Protocol.RequestVoteReply()
@@ -31,6 +32,8 @@ namespace Lighthouse
                     VoteGranted = false
                 });
             }
+            // If RPC request or response contains term T > currentTerm:set currentTerm = T, convert to follower (§5.1)
+            //
             else if (Node.PersistentState.CurrentTerm < request.Term)
             {
                 Node.PersistentState.CurrentTerm = request.Term;
@@ -38,11 +41,13 @@ namespace Lighthouse
             }
 
             // If votedFor is null or candidateId, and candidate’s log is atleast as up-to-date as receiver’s log, grant vote (§5.2, §5.4)
+            //
             if (Node.PersistentState.VotedFor == null || Node.PersistentState.VotedFor == new Guid(request.CandidateId))
             {
                 // Raft determines which of two logs is more up-to-date by comparing the index and term of the last entries in the
                 // logs. If the logs have last entries with different terms, then the log with the later term is more up-to-date.
                 // If the logs end with the same term, then whichever log is longer is more up-to-date.
+                //
                 if (Node.PersistentState.CurrentTerm < request.LastLogTerm ||
                     (Node.PersistentState.CurrentTerm == request.LastLogTerm && Node.VolatileState.CommitIndex <= request.LastLogIndex))
                 {
@@ -55,12 +60,14 @@ namespace Lighthouse
                     });
                 }
             }
-
-            return Task.FromResult(new Protocol.RequestVoteReply()
+            else
             {
-                Term = request.Term,
-                VoteGranted = false
-            });
+                return Task.FromResult(new Protocol.RequestVoteReply()
+                {
+                    Term = request.Term,
+                    VoteGranted = false
+                });
+            }
         }
 
         // 1.  Reply false if term < currentTerm (§5.1)
@@ -71,6 +78,7 @@ namespace Lighthouse
         // 5.  If leaderCommit > commitIndex, set commitIndex =min(leaderCommit, index of last new entry)
         public override Task<Protocol.AppendEntriesReply> AppendEntries(Protocol.AppendEntriesRequest request, ServerCallContext context)
         {
+            // Reply false if term < currentTerm (§5.1)
             if (Node.PersistentState.CurrentTerm > request.Term)
             {
                 return Task.FromResult(new Protocol.AppendEntriesReply
@@ -79,13 +87,17 @@ namespace Lighthouse
                     Success = false
                 });
             }
+            // If RPC request or response contains term T > currentTerm:set currentTerm = T, convert to follower (§5.1)
+            //
             else if (Node.PersistentState.CurrentTerm < request.Term)
             {
                 Node.PersistentState.CurrentTerm = request.Term;
                 Node.Role = Role.Follower;
             }
 
-            var prevLog = Node.PersistentState.Log.ElementAtOrDefault((int)request.PrevLogIndex);
+            // Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (§5.3)
+            //
+            var prevLog = Node.PersistentState.Log.Get(request.PrevLogIndex);
             if (prevLog != null && prevLog.Term != request.PrevLogTerm)
             {
                 return Task.FromResult(new Protocol.AppendEntriesReply
@@ -94,6 +106,46 @@ namespace Lighthouse
                     Success = false
                 });
             }
+
+            if (request.Entries.Count > 0)
+            {
+                foreach (var newEntry in request.Entries)
+                {
+                    // If an existing entry conflicts with a new one (same index but different terms),
+                    // delete the existing entry and all that follow it (§5.3)
+                    //
+                    var existingEntry = Node.PersistentState.Log.Get(newEntry.Index);
+                    if (existingEntry != null && existingEntry.Term != newEntry.Term)
+                    {
+                        Node.PersistentState.Log.Purge(newEntry.Index);
+                    }
+                    else
+                    {
+                        // Append any new entries not already in the log
+                        //
+                        Node.PersistentState.Log.Append(new LogEntry()
+                        {
+                            Index = newEntry.Index,
+                            Term = newEntry.Term
+                        });
+                    }
+                }
+
+                // If leaderCommit > commitIndex, set commitIndex =min(leaderCommit, index of last new entry)
+                //
+                if (request.LeaderCommit > Node.VolatileState.CommitIndex)
+                {
+                    Node.VolatileState.CommitIndex = Math.Min(request.LeaderCommit, request.Entries.Last().Index);
+
+                    // TODO: apply log to state machine here and set lastApplied
+                }
+            }
+
+            return Task.FromResult(new Protocol.AppendEntriesReply()
+            {
+                Term = request.Term,
+                Success = true
+            });
         }
 
         // 1.  Reply immediately if term < currentTerm

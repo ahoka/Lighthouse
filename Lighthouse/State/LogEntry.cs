@@ -2,11 +2,7 @@
 {
     public class LogEntry
     {
-        public LogEntry(ulong term)
-        {
-            Term = term;
-        }
-
-        public ulong Term { get; }
+        public ulong Term { get; set; }
+        public ulong Index { get; set; }
     }
 }
