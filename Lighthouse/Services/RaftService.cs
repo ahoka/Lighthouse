@@ -34,7 +34,7 @@ namespace Lighthouse
             }
             // If RPC request or response contains term T > currentTerm:set currentTerm = T, convert to follower (§5.1)
             //
-            else if (Node.PersistentState.CurrentTerm < request.Term)
+            else if (request.Term > Node.PersistentState.CurrentTerm)
             {
                 Node.PersistentState.CurrentTerm = request.Term;
                 Node.Role = Role.Follower;
@@ -87,7 +87,7 @@ namespace Lighthouse
             }
             // If RPC request or response contains term T > currentTerm:set currentTerm = T, convert to follower (§5.1)
             //
-            else if (Node.PersistentState.CurrentTerm < request.Term)
+            else if (request.Term > Node.PersistentState.CurrentTerm)
             {
                 Node.PersistentState.CurrentTerm = request.Term;
                 Node.Role = Role.Follower;
