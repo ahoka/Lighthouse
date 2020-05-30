@@ -17,6 +17,7 @@ namespace Lighthouse
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddGrpc();
+            services.AddHostedService<NodeBackgroundService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
