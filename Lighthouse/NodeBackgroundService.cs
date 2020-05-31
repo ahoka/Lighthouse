@@ -25,14 +25,28 @@ namespace Lighthouse
 
         private void OnElectionTimeout(object _)
         {
-            // If election timeout elapses: start new election
+            switch (Node.Role)
+            {
+                case Role.Follower:
+                    // If election timeout elapses without receiving AppendEntries RPC
+                    // from current leader or granting vote to candidate: convert to candidate
+                    if (Node.PersistentState.VotedFor != null)
+                    {
+                        Node.PersistentState.CurrentTerm += 1;
+                        Node.PersistentState.VotedFor = Node.Id;
+                        Node.Role = Role.Candidate;
+                        // TODO: Send Request Vote RPC
+                    }
+                    break;
+                case Role.Candidate:
+                    // If election timeout elapses: start new election
+                    Node.PersistentState.CurrentTerm += 1;
+                    Node.PersistentState.VotedFor = Node.Id;
+                    // TODO: Send request vote rpc
+                    break;
+            }
 
-            // restart the timer
             ElectionTimer.Change(300, -1);
-
-            Node.Role = Role.Candidate;
-            Node.PersistentState.VotedFor = Node.Id;
-            // TODO: Send Request Vote RPC
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
