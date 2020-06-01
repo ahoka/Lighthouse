@@ -16,14 +16,16 @@ namespace Lighthouse
         private BlockingCollection<Task> Queue { get; }
         private Timer ElectionTimer { get; }
         private Node Node { get; }
+        private Cluster Cluster { get; }
         private ILogger<NodeBackgroundService> Logger { get; }
 
-        public NodeBackgroundService(Node node, ILogger<NodeBackgroundService> logger)
+        public NodeBackgroundService(Node node, ILogger<NodeBackgroundService> logger, Cluster cluster)
         {
             Node = node;
             ElectionTimer = new Timer(OnElectionTimeout);
             Queue = new BlockingCollection<Task>();
             Logger = logger;
+            Cluster = cluster;
         }
 
         private void OnElectionTimeout(object _)
@@ -56,6 +58,9 @@ namespace Lighthouse
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // join the cluster
+            await Cluster.Initialize();
+
             Logger.LogInformation("Starting election timer");
 
             stoppingToken.Register(() => ElectionTimer.Change(-1, -1));

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Lighthouse.State
+namespace Lighthouse.Persistence
 {
-    public class RaftConfiguration
+    public class RaftNode
     {
-        public Uri Address { get; set; }
+        public Guid NodeId { get; }
         public IEnumerable<RaftPeer> Peers { get; set; }
     }
 }

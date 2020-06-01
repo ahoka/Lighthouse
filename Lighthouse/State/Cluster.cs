@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Lighthouse.Configuration;
+using Lighthouse.Persistence;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,11 +10,30 @@ namespace Lighthouse.State
 {
     public class Cluster
     {
-        public IEnumerable<ClusterMember> Members { get; }
+        public IEnumerable<ClusterMember> Members => _members;
+        public RaftNodePersistence RaftNodePersistence { get; }
+        public RaftConfiguration RaftConfiguration { get; }
 
-        public Cluster(IOptions<RaftConfiguration> options)
+        private List<ClusterMember> _members;
+
+        public Cluster(IOptions<RaftConfiguration> raftConfiguration, RaftNodePersistence raftNodePersistence)
         {
-            options.Value.Peers.Select(p => new ClusterMember(p.Address));
+            RaftNodePersistence = raftNodePersistence;
+            RaftConfiguration = raftConfiguration.Value;
+            _members = new List<ClusterMember>();
+        }
+
+        public async Task Initialize()
+        {
+            var nodeConfig = await RaftNodePersistence.ReadAsync();
+            if (nodeConfig == null)
+            {
+                // need to join the cluster
+            }
+            else
+            {
+                _members = nodeConfig.Peers.Select(p => new ClusterMember(p.NodeId, p.Address)).ToList();
+            }
         }
     }
 }

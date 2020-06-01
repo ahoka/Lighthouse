@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Lighthouse.Configuration;
+using Lighthouse.Persistence;
 using Lighthouse.State;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -27,9 +29,13 @@ namespace Lighthouse
         {
             services.AddGrpc();
             services.AddHostedService<NodeBackgroundService>();
+            
             services.AddSingleton<Node>();
             services.AddSingleton<Cluster>();
+            services.AddSingleton<RaftNodePersistence>();
+
             services.Configure<RaftConfiguration>(Configuration.GetSection("Raft"));
+            services.Configure<PersistenceConfiguration>(Configuration.GetSection("Persistence"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
