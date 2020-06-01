@@ -10,10 +10,34 @@ namespace Lighthouse.State
 {
     public class Cluster
     {
-        public IEnumerable<ClusterMember> Members => _members;
-        public RaftNodePersistence RaftNodePersistence { get; }
-        public RaftConfiguration RaftConfiguration { get; }
+        public Node Node => GetNode();
 
+        private Node GetNode()
+        {
+            if (_node == null)
+            {
+                throw new NodeNotInitializedException();
+            }
+
+            return _node;
+        }
+
+        public IEnumerable<ClusterMember> Members => GetMembers();
+
+        private IEnumerable<ClusterMember> GetMembers()
+        {
+            if (_node == null)
+            {
+                throw new NodeNotInitializedException();
+            }
+
+            return _members;
+        }
+
+        private RaftNodePersistence RaftNodePersistence { get; }
+        private RaftConfiguration RaftConfiguration { get; }
+
+        private Node _node = null;
         private List<ClusterMember> _members;
 
         public Cluster(IOptions<RaftConfiguration> raftConfiguration, RaftNodePersistence raftNodePersistence)
@@ -33,6 +57,7 @@ namespace Lighthouse.State
             else
             {
                 _members = nodeConfig.Peers.Select(p => new ClusterMember(p.NodeId, p.Address)).ToList();
+                _node = new Node(nodeConfig.NodeId);
             }
         }
     }

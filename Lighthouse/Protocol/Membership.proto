@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option csharp_namespace = "Lighthouse.Protocol";
+
+message NodeInfo {
+	string NodeId = 1; // The node ID.
+	string Address = 2; // The cluster accessable address of the node.
+}
+
+message Join {
+	NodeInfo NodeInfo = 1;
+}
+
+message JoinReply {
+	bool Success = 1;
+	repeated NodeInfo Members = 2; // Known cluster members.
+}
+
+service Membership {
+	rpc JoinCluster (Join) returns (JoinReply);
+}

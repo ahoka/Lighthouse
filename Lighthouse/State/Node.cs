@@ -13,9 +13,9 @@ namespace Lighthouse.State
         public PersistentState PersistentState { get; set; }
         public VolatileState VolatileState { get; set; }
 
-        public Node()
+        public Node(Guid id)
         {
-            Id = Guid.NewGuid();
+            Id = id;
             Role = Role.Follower;
             LeaderState = null;
             PersistentState = new PersistentState(); // TODO: load from disk

@@ -7,11 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Protos\Raft.proto" />
+    <None Remove="Protocol\Raft.proto" />
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\Raft.proto" GrpcServices="Raft" />
+    <Protobuf Include="Protocol\Raft.proto" GrpcServices="Raft" />
+    <Protobuf Include="Protocol\Membership.proto" GrpcServices="Membership" />
   </ItemGroup>
 
   <ItemGroup>
