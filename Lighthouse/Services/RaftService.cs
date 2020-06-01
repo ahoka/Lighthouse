@@ -11,17 +11,19 @@ namespace Lighthouse
 {
     public class RaftService : Protocol.Raft.RaftBase
     {
-        private readonly ILogger<RaftService> _logger;
+        private ILogger<RaftService> Logger { get; }
         private Node Node { get; }
 
         public RaftService(ILogger<RaftService> logger, Node node)
         {
-            _logger = logger;
+            Logger = logger;
             Node = node;
         }
 
         public override Task<Protocol.RequestVoteReply> RequestVote(Protocol.RequestVoteRequest request, ServerCallContext context)
         {
+            Logger.LogDebug($"Request vote received from {request.CandidateId}");
+
             // Reply false if term < currentTerm(§5.1)
             //
             if (Node.PersistentState.CurrentTerm > request.Term)
@@ -76,6 +78,8 @@ namespace Lighthouse
         // 5.  If leaderCommit > commitIndex, set commitIndex =min(leaderCommit, index of last new entry)
         public override Task<Protocol.AppendEntriesReply> AppendEntries(Protocol.AppendEntriesRequest request, ServerCallContext context)
         {
+            Logger.LogDebug($"Append entries received from: {request.LeaderId}");
+
             // Reply false if term < currentTerm (§5.1)
             if (Node.PersistentState.CurrentTerm > request.Term)
             {

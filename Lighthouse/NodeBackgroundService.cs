@@ -1,6 +1,7 @@
 ﻿using Lighthouse.State;
 using Microsoft.AspNetCore.Routing.Matching;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -15,16 +16,20 @@ namespace Lighthouse
         private BlockingCollection<Task> Queue { get; }
         private Timer ElectionTimer { get; }
         private Node Node { get; }
+        private ILogger<NodeBackgroundService> Logger { get; }
 
-        public NodeBackgroundService(Node node)
+        public NodeBackgroundService(Node node, ILogger<NodeBackgroundService> logger)
         {
             Node = node;
             ElectionTimer = new Timer(OnElectionTimeout);
             Queue = new BlockingCollection<Task>();
+            Logger = logger;
         }
 
         private void OnElectionTimeout(object _)
         {
+            Logger.LogInformation($"Election timeout, current role: {Node.Role}");
+
             switch (Node.Role)
             {
                 case Role.Follower:
@@ -51,6 +56,10 @@ namespace Lighthouse
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            Logger.LogInformation("Starting election timer");
+
+            stoppingToken.Register(() => ElectionTimer.Change(-1, -1));
+
             ElectionTimer.Change(300, -1);
 
             foreach (var task in Queue.GetConsumingEnumerable(stoppingToken))
@@ -58,6 +67,13 @@ namespace Lighthouse
                 task.Start();
                 await task;
             }
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            ElectionTimer.Dispose();
         }
     }
 }
