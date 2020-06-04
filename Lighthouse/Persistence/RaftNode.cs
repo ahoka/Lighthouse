@@ -5,7 +5,7 @@ namespace Lighthouse.Persistence
 {
     public class RaftNode
     {
-        public Guid NodeId { get; }
+        public Guid NodeId { get; set; }
         public IEnumerable<RaftPeer> Peers { get; set; }
     }
 }

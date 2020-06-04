@@ -21,10 +21,12 @@ namespace Lighthouse.Services
         {
             try
             {
+                Cluster.AddMember(new ClusterMember(Guid.Parse(request.NodeInfo.NodeId), new Uri(request.NodeInfo.Address)));
+
                 var members = Cluster.Members.Select(m => new NodeInfo()
                 {
-                    NodeId = m.NodeId.ToString()
-                    // TODO: address
+                    NodeId = m.NodeId.ToString(),
+                    Address = m.Address.ToString()
                 });
 
                 var reply = new JoinReply()
