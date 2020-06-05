@@ -1,0 +1,25 @@
+version: '3'
+services:
+  howard:
+    build: .
+    environment:
+      ASPNETCORE_URLS: http://localhost:9000
+      Raft__Address: http://howard:9000
+      Raft__Address__Join__0: http://winslow:9000
+      Raft__Address__Join__1: http://wake:9000
+
+  wake:
+    build: .
+    environment:
+      ASPNETCORE_URLS: http://localhost:9000
+      Raft__Address: http://wake:9000
+      Raft__Address__Join__0: http://winslow:9000
+      Raft__Address__Join__1: http://howard:9000
+
+  winslow:
+    build: .
+    environment:
+      ASPNETCORE_URLS: http://localhost:9000
+      Raft__Address: http://winslow:9000
+      Raft__Address__Join__0: http://winslow:9000
+      Raft__Address__Join__1: http://wake:9000
