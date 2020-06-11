@@ -1,25 +1,44 @@
 version: '3'
 services:
+  ca:
+    build: Ca
+    environment:
+      CA_PASSWORD: PassWord123
+    volumes:
+      - pki:/home/step
+
   howard:
     build: .
+    ports:
+      - 9010:9000
     environment:
-      ASPNETCORE_URLS: http://localhost:9000
+      CA_URL: https://ca:4443/
+      ASPNETCORE_URLS: http://0.0.0.0:9000
       Raft__Address: http://howard:9000
-      Raft__Address__Join__0: http://winslow:9000
-      Raft__Address__Join__1: http://wake:9000
+      Raft__Join__0: http://winslow:9000
+      Raft__Join__1: http://wake:9000
 
   wake:
     build: .
+    ports:
+      - 9011:9000
     environment:
-      ASPNETCORE_URLS: http://localhost:9000
+      CA_URL: https://ca:4443/
+      ASPNETCORE_URLS: http://0.0.0.0:9000
       Raft__Address: http://wake:9000
-      Raft__Address__Join__0: http://winslow:9000
+      Raft__Join__0: http://winslow:9000
       Raft__Address__Join__1: http://howard:9000
 
   winslow:
     build: .
+    ports:
+      - 9012:9000
     environment:
-      ASPNETCORE_URLS: http://localhost:9000
+      CA_URL: https://ca:4443/
+      ASPNETCORE_URLS: http://0.0.0.0:9000
       Raft__Address: http://winslow:9000
-      Raft__Address__Join__0: http://winslow:9000
-      Raft__Address__Join__1: http://wake:9000
+      Raft__Join__0: http://howard:9000
+      Raft__Join__1: http://wake:9000
+
+volumes:
+  pki:

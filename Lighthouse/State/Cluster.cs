@@ -2,6 +2,7 @@
 using Lighthouse.Configuration;
 using Lighthouse.Persistence;
 using Lighthouse.Protocol;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
@@ -61,49 +62,87 @@ namespace Lighthouse.State
         private Node _node = null;
         private ConcurrentDictionary<Guid, ClusterMember> _members;
 
-        public Cluster(IOptions<RaftConfiguration> raftConfiguration, RaftNodePersistence raftNodePersistence)
+        private ILogger<Cluster> Logger { get; }
+        public ILoggerFactory LoggerFactory { get; }
+
+        public Cluster(IOptions<RaftConfiguration> raftConfiguration, RaftNodePersistence raftNodePersistence, ILogger<Cluster> logger, ILoggerFactory loggerFactory)
         {
             RaftNodePersistence = raftNodePersistence;
             RaftConfiguration = raftConfiguration.Value;
             _members = new ConcurrentDictionary<Guid, ClusterMember>();
+            Logger = logger;
+            LoggerFactory = loggerFactory;
         }
 
         public async Task Initialize()
         {
-            var nodeConfig = await RaftNodePersistence.ReadAsync();
-            if (nodeConfig == null)
+            try
             {
-                foreach (var peer in RaftConfiguration.Join)
+                var nodeConfig = await RaftNodePersistence.ReadAsync();
+                if (nodeConfig == null)
                 {
-                    var channel = GrpcChannel.ForAddress(peer);
-                    var client = new Membership.MembershipClient(channel);
+                    Logger.LogInformation("Bootstrapping node.");
 
-                    var result = await client.JoinClusterAsync(new Join()
+                    _node = new Node(Guid.NewGuid());
+
+                    var expectedPeers = RaftConfiguration.Join.ToList();
+                    while (_members.Count < 1)
                     {
-                        NodeInfo = new NodeInfo()
+                        foreach (var peer in expectedPeers.ToList())
                         {
-                            Address = RaftConfiguration.Address.ToString(),
-                            NodeId = Node.Id.ToString()
+                            try
+                            {
+                                var channel = GrpcChannel.ForAddress(peer, new GrpcChannelOptions()
+                                {
+                                    LoggerFactory = LoggerFactory,
+                                    
+                                });
+                                var client = new Membership.MembershipClient(channel);
+
+                                var result = await client.JoinClusterAsync(new Join()
+                                {
+                                    NodeInfo = new NodeInfo()
+                                    {
+                                        Address = RaftConfiguration.Address.ToString(),
+                                        NodeId = Node.Id.ToString()
+                                    }
+                                });
+
+                                if (result.Success)
+                                {
+                                    expectedPeers.Remove(peer);
+
+                                    foreach (var m in result.Members)
+                                    {
+                                        _members.TryAdd(Guid.Parse(m.NodeId), new ClusterMember(Guid.Parse(m.NodeId), new Uri(m.Address)));
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogError(ex, $"Cannot contact peer '{peer}', skipping...");
+                            }
                         }
-                    });
 
-                    if (result.Success)
-                    {
-                        foreach (var m in result.Members)
+                        if (_members.Count < 1)
                         {
-                            _members.TryAdd(Guid.Parse(m.NodeId), new ClusterMember(Guid.Parse(m.NodeId), new Uri(m.Address)));
+                            await Task.Delay(500);
                         }
                     }
                 }
-            }
-            else
-            {
-                foreach (var m in nodeConfig.Peers.Select(p => new ClusterMember(p.NodeId, p.Address)))
+                else
                 {
-                    _members.TryAdd(m.NodeId, m);
-                }
+                    foreach (var m in nodeConfig.Peers.Select(p => new ClusterMember(p.NodeId, p.Address)))
+                    {
+                        _members.TryAdd(m.NodeId, m);
+                    }
 
-                _node = new Node(nodeConfig.NodeId);
+                    _node = new Node(nodeConfig.NodeId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error during node initialization.");
             }
         }
     }

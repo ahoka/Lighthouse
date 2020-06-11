@@ -12,12 +12,12 @@ namespace Lighthouse
     public class RaftService : Protocol.Raft.RaftBase
     {
         private ILogger<RaftService> Logger { get; }
-        private Node Node { get; }
+        private Cluster Cluster { get; }
 
-        public RaftService(ILogger<RaftService> logger, Node node)
+        public RaftService(ILogger<RaftService> logger, Cluster cluster)
         {
             Logger = logger;
-            Node = node;
+            Cluster = cluster;
         }
 
         public override Task<Protocol.RequestVoteReply> RequestVote(Protocol.RequestVoteRequest request, ServerCallContext context)
@@ -26,34 +26,34 @@ namespace Lighthouse
 
             // Reply false if term < currentTerm(§5.1)
             //
-            if (Node.PersistentState.CurrentTerm > request.Term)
+            if (Cluster.Node.PersistentState.CurrentTerm > request.Term)
             {
                 return Task.FromResult(new Protocol.RequestVoteReply()
                 {
-                    Term = Node.PersistentState.CurrentTerm,
+                    Term = Cluster.Node.PersistentState.CurrentTerm,
                     VoteGranted = false
                 });
             }
             // If RPC request or response contains term T > currentTerm:set currentTerm = T, convert to follower (§5.1)
             //
-            else if (request.Term > Node.PersistentState.CurrentTerm)
+            else if (request.Term > Cluster.Node.PersistentState.CurrentTerm)
             {
-                Node.PersistentState.CurrentTerm = request.Term;
-                Node.Role = Role.Follower;
+                Cluster.Node.PersistentState.CurrentTerm = request.Term;
+                Cluster.Node.Role = Role.Follower;
             }
 
             // If votedFor is null or candidateId, and candidate’s log is atleast as up-to-date as receiver’s log, grant vote (§5.2, §5.4)
             //
-            if (Node.PersistentState.VotedFor == null || Node.PersistentState.VotedFor == new Guid(request.CandidateId))
+            if (Cluster.Node.PersistentState.VotedFor == null || Cluster.Node.PersistentState.VotedFor == new Guid(request.CandidateId))
             {
                 // Raft determines which of two logs is more up-to-date by comparing the index and term of the last entries in the
                 // logs. If the logs have last entries with different terms, then the log with the later term is more up-to-date.
                 // If the logs end with the same term, then whichever log is longer is more up-to-date.
                 //
-                if (Node.PersistentState.CurrentTerm < request.LastLogTerm ||
-                    (Node.PersistentState.CurrentTerm == request.LastLogTerm && Node.VolatileState.CommitIndex <= request.LastLogIndex))
+                if (Cluster.Node.PersistentState.CurrentTerm < request.LastLogTerm ||
+                    (Cluster.Node.PersistentState.CurrentTerm == request.LastLogTerm && Cluster.Node.VolatileState.CommitIndex <= request.LastLogIndex))
                 {
-                    Node.PersistentState.VotedFor = new Guid(request.CandidateId);
+                    Cluster.Node.PersistentState.VotedFor = new Guid(request.CandidateId);
 
                     return Task.FromResult(new Protocol.RequestVoteReply()
                     {
@@ -81,30 +81,30 @@ namespace Lighthouse
             Logger.LogDebug($"Append entries received from: {request.LeaderId}");
 
             // Reply false if term < currentTerm (§5.1)
-            if (Node.PersistentState.CurrentTerm > request.Term)
+            if (Cluster.Node.PersistentState.CurrentTerm > request.Term)
             {
                 return Task.FromResult(new Protocol.AppendEntriesReply
                 {
-                    Term = Node.PersistentState.CurrentTerm,
+                    Term = Cluster.Node.PersistentState.CurrentTerm,
                     Success = false
                 });
             }
             // If RPC request or response contains term T > currentTerm:set currentTerm = T, convert to follower (§5.1)
             //
-            else if (request.Term > Node.PersistentState.CurrentTerm)
+            else if (request.Term > Cluster.Node.PersistentState.CurrentTerm)
             {
-                Node.PersistentState.CurrentTerm = request.Term;
-                Node.Role = Role.Follower;
+                Cluster.Node.PersistentState.CurrentTerm = request.Term;
+                Cluster.Node.Role = Role.Follower;
             }
 
             // Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (§5.3)
             //
-            var prevLog = Node.PersistentState.Log.Get(request.PrevLogIndex);
+            var prevLog = Cluster.Node.PersistentState.Log.Get(request.PrevLogIndex);
             if (prevLog != null && prevLog.Term != request.PrevLogTerm)
             {
                 return Task.FromResult(new Protocol.AppendEntriesReply
                 {
-                    Term = Node.PersistentState.CurrentTerm,
+                    Term = Cluster.Node.PersistentState.CurrentTerm,
                     Success = false
                 });
             }
@@ -116,16 +116,16 @@ namespace Lighthouse
                     // If an existing entry conflicts with a new one (same index but different terms),
                     // delete the existing entry and all that follow it (§5.3)
                     //
-                    var existingEntry = Node.PersistentState.Log.Get(newEntry.Index);
+                    var existingEntry = Cluster.Node.PersistentState.Log.Get(newEntry.Index);
                     if (existingEntry != null && existingEntry.Term != newEntry.Term)
                     {
-                        Node.PersistentState.Log.Purge(newEntry.Index);
+                        Cluster.Node.PersistentState.Log.Purge(newEntry.Index);
                     }
                     else
                     {
                         // Append any new entries not already in the log
                         //
-                        Node.PersistentState.Log.Append(new LogEntry()
+                        Cluster.Node.PersistentState.Log.Append(new LogEntry()
                         {
                             Index = newEntry.Index,
                             Term = newEntry.Term
@@ -135,9 +135,9 @@ namespace Lighthouse
 
                 // If leaderCommit > commitIndex, set commitIndex =min(leaderCommit, index of last new entry)
                 //
-                if (request.LeaderCommit > Node.VolatileState.CommitIndex)
+                if (request.LeaderCommit > Cluster.Node.VolatileState.CommitIndex)
                 {
-                    Node.VolatileState.CommitIndex = Math.Min(request.LeaderCommit, request.Entries.Last().Index);
+                    Cluster.Node.VolatileState.CommitIndex = Math.Min(request.LeaderCommit, request.Entries.Last().Index);
 
                     // TODO: apply log to state machine here and set lastApplied
                 }

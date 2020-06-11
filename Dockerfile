@@ -1,3 +1,5 @@
+FROM smallstep/step-cli:0.14.4 AS step-cli
+
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-buster-slim AS base
 WORKDIR /app
 EXPOSE 80
@@ -16,5 +18,8 @@ RUN dotnet publish "Lighthouse.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
+COPY --from=step-cli /usr/local/bin/step /usr/local/bin/
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Lighthouse.dll"]
+COPY entrypoint.sh /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

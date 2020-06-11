@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Lighthouse.Configuration;
 using Lighthouse.Persistence;
+using Lighthouse.Services;
 using Lighthouse.State;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -19,6 +20,7 @@ namespace Lighthouse
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
         }
 
         private IConfiguration Configuration { get; }
@@ -28,9 +30,10 @@ namespace Lighthouse
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddGrpc();
+            services.AddControllers();
+
             services.AddHostedService<NodeBackgroundService>();
             
-            services.AddSingleton<Node>();
             services.AddSingleton<Cluster>();
             services.AddSingleton<RaftNodePersistence>();
 
@@ -51,11 +54,9 @@ namespace Lighthouse
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<RaftService>();
+                endpoints.MapGrpcService<MembershipService>();
 
-                endpoints.MapGet("/", async context =>
-                {
-                    await context.Response.WriteAsync("Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
-                });
+                endpoints.MapControllers();
             });
         }
     }

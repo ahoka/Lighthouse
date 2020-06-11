@@ -15,13 +15,11 @@ namespace Lighthouse
     {
         private BlockingCollection<Task> Queue { get; }
         private Timer ElectionTimer { get; }
-        private Node Node { get; }
         private Cluster Cluster { get; }
         private ILogger<NodeBackgroundService> Logger { get; }
 
-        public NodeBackgroundService(Node node, ILogger<NodeBackgroundService> logger, Cluster cluster)
+        public NodeBackgroundService(ILogger<NodeBackgroundService> logger, Cluster cluster)
         {
-            Node = node;
             ElectionTimer = new Timer(OnElectionTimeout);
             Queue = new BlockingCollection<Task>();
             Logger = logger;
@@ -30,27 +28,36 @@ namespace Lighthouse
 
         private void OnElectionTimeout(object _)
         {
-            Logger.LogInformation($"Election timeout, current role: {Node.Role}");
-
-            switch (Node.Role)
+            try
             {
-                case Role.Follower:
-                    // If election timeout elapses without receiving AppendEntries RPC
-                    // from current leader or granting vote to candidate: convert to candidate
-                    if (Node.PersistentState.VotedFor != null)
-                    {
+                var Node = Cluster.Node;
+
+                Logger.LogDebug($"Election timeout, current role: {Node.Role}");
+
+                switch (Node.Role)
+                {
+                    case Role.Follower:
+                        // If election timeout elapses without receiving AppendEntries RPC
+                        // from current leader or granting vote to candidate: convert to candidate
+                        if (Node.PersistentState.VotedFor != null)
+                        {
+                            Node.PersistentState.CurrentTerm += 1;
+                            Node.PersistentState.VotedFor = Node.Id;
+                            Node.Role = Role.Candidate;
+                            // TODO: Send Request Vote RPC
+                        }
+                        break;
+                    case Role.Candidate:
+                        // If election timeout elapses: start new election
                         Node.PersistentState.CurrentTerm += 1;
                         Node.PersistentState.VotedFor = Node.Id;
-                        Node.Role = Role.Candidate;
-                        // TODO: Send Request Vote RPC
-                    }
-                    break;
-                case Role.Candidate:
-                    // If election timeout elapses: start new election
-                    Node.PersistentState.CurrentTerm += 1;
-                    Node.PersistentState.VotedFor = Node.Id;
-                    // TODO: Send request vote rpc
-                    break;
+                        // TODO: Send request vote rpc
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error during handling election timeout.");
             }
 
             ElectionTimer.Change(300, -1);
@@ -58,6 +65,8 @@ namespace Lighthouse
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            Logger.LogInformation("Starting background service.");
+
             // join the cluster
             await Cluster.Initialize();
 
