@@ -1,9 +1,9 @@
-﻿using Grpc.Core;
+﻿//using Grpc.Core;
+using Grpc.Core;
 using Lighthouse.Configuration;
 using Lighthouse.Protocol;
 using Lighthouse.State;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,12 +15,12 @@ namespace Lighthouse.Services
     {
         private RaftConfiguration Configuration { get; }
         private Cluster Cluster { get; }
-        private ILogger<MembershipService> Logger { get; }
+        private ILogger Logger { get; }
 
-        public MembershipService(Cluster cluster, IOptions<RaftConfiguration> raftConfiguration, ILogger<MembershipService> logger)
+        public MembershipService(Cluster cluster, RaftConfiguration raftConfiguration, ILogger logger)
         {
             Cluster = cluster;
-            Configuration = raftConfiguration.Value;
+            Configuration = raftConfiguration;
             Logger = logger;
         }
 
@@ -52,7 +52,7 @@ namespace Lighthouse.Services
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to add new node to cluster.");
+                Logger.Error(ex, "Failed to add new node to cluster.");
 
                 return new JoinReply()
                 {

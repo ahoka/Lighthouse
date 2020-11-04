@@ -1,7 +1,6 @@
 ﻿using Lighthouse.Configuration;
 using Lighthouse.Protocol;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,13 +13,13 @@ namespace Lighthouse.Persistence
 {
     public class RaftNodePersistence
     {
-        public RaftNodePersistence(IOptions<PersistenceConfiguration> config, ILogger<RaftNodePersistence> logger)
+        public RaftNodePersistence(PersistenceConfiguration config, ILogger logger)
         {
-            Config = config.Value;
+            Config = config;
             Logger = logger;
         }
 
-        private ILogger<RaftNodePersistence> Logger { get; }
+        private ILogger Logger { get; }
         private PersistenceConfiguration Config { get; }
 
         public async Task<RaftNode> ReadAsync()
@@ -32,13 +31,13 @@ namespace Lighthouse.Persistence
             }
             catch (Exception ex)
             {
-                if (ex is FileNotFoundException)
+                if (ex is FileNotFoundException || ex is DirectoryNotFoundException)
                 {
-                    Logger.LogInformation("No node configuration present.");
+                    Logger.Information("No node configuration present.");
                 }
                 else
                 {
-                    Logger.LogError(ex, "Error reading node configuration.");
+                    Logger.Error(ex, "Error reading node configuration.");
                 }
 
                 return null;
@@ -58,7 +57,7 @@ namespace Lighthouse.Persistence
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error writing node configuration.");
+                Logger.Error(ex, "Error writing node configuration.");
             }
         }
     }

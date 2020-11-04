@@ -1,9 +1,8 @@
-﻿using Grpc.Net.Client;
+﻿using Grpc.Core;
 using Lighthouse.Configuration;
 using Lighthouse.Persistence;
 using Lighthouse.Protocol;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -62,16 +61,14 @@ namespace Lighthouse.State
         private Node _node = null;
         private ConcurrentDictionary<Guid, ClusterMember> _members;
 
-        private ILogger<Cluster> Logger { get; }
-        public ILoggerFactory LoggerFactory { get; }
+        private ILogger Logger { get; }
 
-        public Cluster(IOptions<RaftConfiguration> raftConfiguration, RaftNodePersistence raftNodePersistence, ILogger<Cluster> logger, ILoggerFactory loggerFactory)
+        public Cluster(RaftConfiguration raftConfiguration, RaftNodePersistence raftNodePersistence, ILogger logger)
         {
             RaftNodePersistence = raftNodePersistence;
-            RaftConfiguration = raftConfiguration.Value;
+            RaftConfiguration = raftConfiguration;
             _members = new ConcurrentDictionary<Guid, ClusterMember>();
             Logger = logger;
-            LoggerFactory = loggerFactory;
         }
 
         public async Task Initialize()
@@ -81,22 +78,23 @@ namespace Lighthouse.State
                 var nodeConfig = await RaftNodePersistence.ReadAsync();
                 if (nodeConfig == null)
                 {
-                    Logger.LogInformation("Bootstrapping node.");
+                    Logger.Information("Bootstrapping node.");
 
                     _node = new Node(Guid.NewGuid());
 
                     var expectedPeers = RaftConfiguration.Join.ToList();
+
+                    Logger.Information($"Expected peers: {string.Join(",", expectedPeers.Select(x => x.ToString()))}");
                     while (_members.Count < 1)
                     {
                         foreach (var peer in expectedPeers.ToList())
                         {
                             try
-                            {
-                                var channel = GrpcChannel.ForAddress(peer, new GrpcChannelOptions()
-                                {
-                                    LoggerFactory = LoggerFactory,
-                                    
-                                });
+                            {   
+                                var channel = new Channel(peer.ToString(), ChannelCredentials.Insecure);//, new GrpcChannelOptions()
+                                //{
+                                //    LoggerFactory = LoggerFactory
+                                //});
                                 var client = new Membership.MembershipClient(channel);
 
                                 var result = await client.JoinClusterAsync(new Join()
@@ -120,12 +118,13 @@ namespace Lighthouse.State
                             }
                             catch (Exception ex)
                             {
-                                Logger.LogError(ex, $"Cannot contact peer '{peer}', skipping...");
+                                Logger.Error(ex, $"Cannot contact peer '{peer}', skipping...");
                             }
                         }
 
                         if (_members.Count < 1)
                         {
+                            Logger.Warning("No members reached, retrying in 500ms...");
                             await Task.Delay(500);
                         }
                     }
@@ -142,7 +141,7 @@ namespace Lighthouse.State
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error during node initialization.");
+                Logger.Error(ex, "Error during node initialization.");
             }
         }
     }

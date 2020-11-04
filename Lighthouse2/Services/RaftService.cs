@@ -4,17 +4,18 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Grpc.Core;
+using Lighthouse.Protocol;
 using Lighthouse.State;
-using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace Lighthouse
 {
-    public class RaftService : Protocol.Raft.RaftBase
+    public class RaftService : Raft.RaftBase
     {
-        private ILogger<RaftService> Logger { get; }
+        private ILogger Logger { get; }
         private Cluster Cluster { get; }
 
-        public RaftService(ILogger<RaftService> logger, Cluster cluster)
+        public RaftService(ILogger logger, Cluster cluster)
         {
             Logger = logger;
             Cluster = cluster;
@@ -22,7 +23,7 @@ namespace Lighthouse
 
         public override Task<Protocol.RequestVoteReply> RequestVote(Protocol.RequestVoteRequest request, ServerCallContext context)
         {
-            Logger.LogDebug($"Request vote received from {request.CandidateId}");
+            Logger.Debug($"Request vote received from {request.CandidateId}");
 
             // Reply false if term < currentTerm(§5.1)
             //
@@ -78,7 +79,7 @@ namespace Lighthouse
         // 5.  If leaderCommit > commitIndex, set commitIndex =min(leaderCommit, index of last new entry)
         public override Task<Protocol.AppendEntriesReply> AppendEntries(Protocol.AppendEntriesRequest request, ServerCallContext context)
         {
-            Logger.LogDebug($"Append entries received from: {request.LeaderId}");
+            Logger.Debug($"Append entries received from: {request.LeaderId}");
 
             // Reply false if term < currentTerm (§5.1)
             if (Cluster.Node.PersistentState.CurrentTerm > request.Term)
@@ -109,7 +110,7 @@ namespace Lighthouse
                 });
             }
 
-            if (request.Entries.Count > 0)
+            if (request.Entries.Count() > 0)
             {
                 foreach (var newEntry in request.Entries)
                 {
@@ -125,7 +126,7 @@ namespace Lighthouse
                     {
                         // Append any new entries not already in the log
                         //
-                        Cluster.Node.PersistentState.Log.Append(new LogEntry()
+                        Cluster.Node.PersistentState.Log.Append(new State.LogEntry()
                         {
                             Index = newEntry.Index,
                             Term = newEntry.Term

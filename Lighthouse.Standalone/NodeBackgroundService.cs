@@ -1,7 +1,5 @@
 ﻿using Lighthouse.State;
-using Microsoft.AspNetCore.Routing.Matching;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,14 +9,14 @@ using System.Threading.Tasks;
 
 namespace Lighthouse
 {
-    public class NodeBackgroundService : BackgroundService
+    public class NodeBackgroundService : IDisposable
     {
         private BlockingCollection<Task> Queue { get; }
         private Timer ElectionTimer { get; }
         private Cluster Cluster { get; }
-        private ILogger<NodeBackgroundService> Logger { get; }
+        private ILogger Logger { get; }
 
-        public NodeBackgroundService(ILogger<NodeBackgroundService> logger, Cluster cluster)
+        public NodeBackgroundService(ILogger logger, Cluster cluster)
         {
             ElectionTimer = new Timer(OnElectionTimeout);
             Queue = new BlockingCollection<Task>();
@@ -32,7 +30,7 @@ namespace Lighthouse
             {
                 var Node = Cluster.Node;
 
-                Logger.LogDebug($"Election timeout, current role: {Node.Role}");
+                Logger.Debug($"Election timeout, current role: {Node.Role}");
 
                 switch (Node.Role)
                 {
@@ -57,20 +55,20 @@ namespace Lighthouse
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error during handling election timeout.");
+                Logger.Error(ex, "Error during handling election timeout.");
             }
 
             ElectionTimer.Change(300, -1);
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            Logger.LogInformation("Starting background service.");
+            Logger.Information("Starting background service.");
 
             // join the cluster
             await Cluster.Initialize();
 
-            Logger.LogInformation("Starting election timer");
+            Logger.Information("Starting election timer");
 
             stoppingToken.Register(() => ElectionTimer.Change(-1, -1));
 
@@ -83,10 +81,8 @@ namespace Lighthouse
             }
         }
 
-        public override void Dispose()
+        public void Dispose()
         {
-            base.Dispose();
-
             ElectionTimer.Dispose();
         }
     }

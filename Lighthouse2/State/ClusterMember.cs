@@ -1,4 +1,4 @@
-﻿using Grpc.Net.Client;
+﻿using Grpc.Core;
 using Lighthouse.Protocol;
 using System;
 using System.Security.Cryptography.X509Certificates;
@@ -18,7 +18,7 @@ namespace Lighthouse.State
             NodeId = id;
             Address = address;
 
-            var channel = GrpcChannel.ForAddress(address);
+            var channel = new Channel(address.ToString(), ChannelCredentials.Insecure);
             Client = new Raft.RaftClient(channel);
         }
     }
