@@ -1,8 +1,12 @@
-﻿using Lighthouse.Configuration;
+﻿using Grpc.Core;
+using Lighthouse.Configuration;
 using Lighthouse.Persistence;
+using Lighthouse.Protocol;
+using Lighthouse.Services;
 using Lighthouse.State;
 using Serilog;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,18 +19,36 @@ namespace Lighthouse.Standalone
             var logger = new LoggerConfiguration()
                 .WriteTo.Console()
                 .CreateLogger();
+
+            var configuration = new RaftConfiguration()
+            {
+                Address = new Uri(Environment.GetEnvironmentVariable("LH_ADDRESS")),
+                Join = Environment.GetEnvironmentVariable("LH_PEERS")?
+                    .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => new Uri(x))
+            };
+
             var persistence = new RaftNodePersistence(new PersistenceConfiguration()
             {
-                DataDirectory = "data"
+                DataDirectory = "/app"
             }, logger);
-            var cluster = new Cluster(new RaftConfiguration()
-            {
-                Address = new Uri("localhost:9888"),
-                Join = new Uri[] { }
-            }, persistence, logger);
+            var cluster = new Cluster(configuration, persistence, logger);
             var service = new NodeBackgroundService(logger, cluster);
 
+            var server = new Server()
+            {
+                Services =
+                {
+                    Raft.BindService(new RaftService(logger, cluster)),
+                    Membership.BindService(new MembershipService(cluster, configuration, logger))
+                },
+                Ports = { new ServerPort("0.0.0.0", 9000, ServerCredentials.Insecure) }
+            };
+
+            server.Start();
+
             await service.ExecuteAsync(CancellationToken.None);
+            await server.ShutdownAsync();
         }
     }
 }

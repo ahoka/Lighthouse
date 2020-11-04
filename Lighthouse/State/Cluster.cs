@@ -82,9 +82,9 @@ namespace Lighthouse.State
 
                     _node = new Node(Guid.NewGuid());
 
-                    var expectedPeers = RaftConfiguration.Join.ToList();
+                    var expectedPeers = RaftConfiguration.Join.Select(x => $"{x.Host}:{x.Port}").ToList();
 
-                    Logger.Information($"Expected peers: {string.Join(",", expectedPeers.Select(x => x.ToString()))}");
+                    Logger.Information($"Expected peers: {string.Join(", ", expectedPeers)}");
                     while (_members.Count < 1)
                     {
                         foreach (var peer in expectedPeers.ToList())
@@ -101,7 +101,7 @@ namespace Lighthouse.State
                                 {
                                     NodeInfo = new NodeInfo()
                                     {
-                                        Address = RaftConfiguration.Address.ToString(),
+                                        Address = $"{RaftConfiguration.Address.Host}:{RaftConfiguration.Address.Port}",
                                         NodeId = Node.Id.ToString()
                                     }
                                 });

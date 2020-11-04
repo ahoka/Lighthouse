@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Lighthouse.Standalone": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}

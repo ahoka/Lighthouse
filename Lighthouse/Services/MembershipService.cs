@@ -43,7 +43,7 @@ namespace Lighthouse.Services
 
                 reply.Members.Add(new NodeInfo() {
                     NodeId = Cluster.Node.Id.ToString(),
-                    Address = Configuration.Address.ToString()
+                    Address = $"{Configuration.Address.Host}:{Configuration.Address.Port}"
                 });
 
                 reply.Members.AddRange(members);

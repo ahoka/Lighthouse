@@ -31,7 +31,7 @@ namespace Lighthouse.Persistence
             }
             catch (Exception ex)
             {
-                if (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+                if (ex is FileNotFoundException)
                 {
                     Logger.Information("No node configuration present.");
                 }
