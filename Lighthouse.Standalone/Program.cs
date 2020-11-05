@@ -17,6 +17,7 @@ namespace Lighthouse.Standalone
         static async Task Main(string[] args)
         {
             var logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
                 .WriteTo.Console()
                 .CreateLogger();
 

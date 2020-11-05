@@ -14,6 +14,8 @@ namespace Lighthouse.State
 
         public ulong LastIndex => (ulong)(Entries.Count - 1);
 
+        public ulong LastIndexTerm => Entries.Count == 0 ? 0 : Get(LastIndex).Term;
+
         public Log()
         {
             Entries = new List<LogEntry>();

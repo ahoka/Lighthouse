@@ -53,6 +53,7 @@ namespace Lighthouse.Persistence
 
             try
             {
+                Logger.Debug($"Persisting cluster state: {data}");
                 await File.WriteAllTextAsync(Path.Combine(Config.DataDirectory, "node.json"), data);
             }
             catch (Exception ex)

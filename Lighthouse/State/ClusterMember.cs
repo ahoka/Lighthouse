@@ -9,16 +9,16 @@ namespace Lighthouse.State
     public class ClusterMember
     {
         public Guid NodeId { get; }
-        public Uri Address { get; }
+        public string Address { get; }
 
         public RaftClient Client { get; }
 
-        public ClusterMember(Guid id, Uri address)
+        public ClusterMember(Guid id, string address)
         {
             NodeId = id;
             Address = address;
 
-            var channel = new Channel(address.ToString(), ChannelCredentials.Insecure);
+            var channel = new Channel(address, ChannelCredentials.Insecure);
             Client = new Raft.RaftClient(channel);
         }
     }

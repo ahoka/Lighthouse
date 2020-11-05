@@ -39,6 +39,12 @@ namespace Lighthouse.State
 
         public async Task AddMember(ClusterMember clusterMember)
         {
+            if (clusterMember.NodeId == Node.Id)
+            {
+                Logger.Debug("Not adding self to the peer list.");
+                return;
+            }
+
             // TODO: what if duplicate?
             _members.TryAdd(clusterMember.NodeId, clusterMember);
 
@@ -112,7 +118,7 @@ namespace Lighthouse.State
 
                                     foreach (var m in result.Members)
                                     {
-                                        _members.TryAdd(Guid.Parse(m.NodeId), new ClusterMember(Guid.Parse(m.NodeId), new Uri(m.Address)));
+                                        _members.TryAdd(Guid.Parse(m.NodeId), new ClusterMember(Guid.Parse(m.NodeId), m.Address));
                                     }
                                 }
                             }

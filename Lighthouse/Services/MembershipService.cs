@@ -26,9 +26,11 @@ namespace Lighthouse.Services
 
         public override async Task<JoinReply> JoinCluster(Join request, ServerCallContext context)
         {
+            Logger.Information($"{request.NodeInfo.NodeId}@{request.NodeInfo.Address} joining the cluster");
+
             try
             {
-                await Cluster.AddMember(new ClusterMember(Guid.Parse(request.NodeInfo.NodeId), new Uri(request.NodeInfo.Address)));
+                await Cluster.AddMember(new ClusterMember(Guid.Parse(request.NodeInfo.NodeId), request.NodeInfo.Address));
 
                 var members = Cluster.Members.Select(m => new NodeInfo()
                 {
@@ -38,7 +40,7 @@ namespace Lighthouse.Services
 
                 var reply = new JoinReply()
                 {
-                    Success = true,
+                    Success = true
                 };
 
                 reply.Members.Add(new NodeInfo() {

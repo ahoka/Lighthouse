@@ -29,6 +29,7 @@ namespace Lighthouse
             //
             if (Cluster.Node.PersistentState.CurrentTerm > request.Term)
             {
+                Logger.Debug($"Term {Cluster.Node.PersistentState.CurrentTerm} > {request.Term}, deny vote.");
                 return Task.FromResult(new Protocol.RequestVoteReply()
                 {
                     Term = Cluster.Node.PersistentState.CurrentTerm,
@@ -56,6 +57,8 @@ namespace Lighthouse
                 {
                     Cluster.Node.PersistentState.VotedFor = new Guid(request.CandidateId);
 
+                    Logger.Debug($"Voting for {request.CandidateId}");
+
                     return Task.FromResult(new Protocol.RequestVoteReply()
                     {
                         Term = request.Term,
@@ -63,7 +66,9 @@ namespace Lighthouse
                     });
                 }
             }
-            
+
+            Logger.Debug("Denying vote");
+
             return Task.FromResult(new Protocol.RequestVoteReply()
             {
                 Term = request.Term,
