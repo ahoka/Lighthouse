@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Lighthouse.Protocol;
@@ -23,11 +24,26 @@ namespace Lighthouse
 
         public override Task<Protocol.RequestVoteReply> RequestVote(Protocol.RequestVoteRequest request, ServerCallContext context)
         {
-            Logger.Debug($"Request vote received from {request.CandidateId}");
+            using var _ = Cluster.Node.Lock();
+
+            var candidate = Cluster.Members.FirstOrDefault(m => m.NodeId == new Guid(request.CandidateId));
+            if (candidate == null)
+            {
+                Logger.Warning($"Received RequestVote RPC from unknown node: {request.CandidateId}");
+                return Task.FromResult(new Protocol.RequestVoteReply()
+                {
+                    Term = Cluster.Node.PersistentState.CurrentTerm,
+                    VoteGranted = false
+                });
+            }
+            else
+            {
+                Logger.Debug($"Request vote received from {request.CandidateId}@{candidate.Address}");
+            }
 
             // Reply false if term < currentTerm(§5.1)
             //
-            if (Cluster.Node.PersistentState.CurrentTerm > request.Term)
+            if (request.Term < Cluster.Node.PersistentState.CurrentTerm)
             {
                 Logger.Debug($"Term {Cluster.Node.PersistentState.CurrentTerm} > {request.Term}, deny vote.");
                 return Task.FromResult(new Protocol.RequestVoteReply()
@@ -40,7 +56,9 @@ namespace Lighthouse
             //
             else if (request.Term > Cluster.Node.PersistentState.CurrentTerm)
             {
+                Logger.Debug($"Learned term {request.Term} > {Cluster.Node.PersistentState.CurrentTerm}, converting to follower");
                 Cluster.Node.PersistentState.CurrentTerm = request.Term;
+                Cluster.Node.PersistentState.VotedFor = null;
                 Cluster.Node.Role = Role.Follower;
             }
 
@@ -52,19 +70,28 @@ namespace Lighthouse
                 // logs. If the logs have last entries with different terms, then the log with the later term is more up-to-date.
                 // If the logs end with the same term, then whichever log is longer is more up-to-date.
                 //
-                if (Cluster.Node.PersistentState.CurrentTerm < request.LastLogTerm ||
-                    (Cluster.Node.PersistentState.CurrentTerm == request.LastLogTerm && Cluster.Node.VolatileState.CommitIndex <= request.LastLogIndex))
+                if (Cluster.Node.PersistentState.Log.LastLogTerm < request.LastLogTerm ||
+                    (Cluster.Node.PersistentState.Log.LastLogTerm == request.LastLogTerm && Cluster.Node.PersistentState.Log.LastLogIndex <= request.LastLogIndex))
                 {
-                    Cluster.Node.PersistentState.VotedFor = new Guid(request.CandidateId);
+                    Cluster.Node.PersistentState.VotedFor = candidate.NodeId;
+                    Cluster.ResetElectionTimer();
 
-                    Logger.Debug($"Voting for {request.CandidateId}");
+                    Logger.Debug($"Voting for {candidate.NodeId}@{candidate.Address}");
 
-                    return Task.FromResult(new Protocol.RequestVoteReply()
+                    return Task.FromResult(new RequestVoteReply()
                     {
                         Term = request.Term,
                         VoteGranted = true
                     });
                 }
+                else
+                {
+                    Logger.Debug("Requester's log is not up-to-date");
+                }
+            }
+            else
+            {
+                Logger.Debug($"Already voted for {Cluster.Node.PersistentState.VotedFor}");
             }
 
             Logger.Debug("Denying vote");
@@ -84,10 +111,15 @@ namespace Lighthouse
         // 5.  If leaderCommit > commitIndex, set commitIndex =min(leaderCommit, index of last new entry)
         public override Task<Protocol.AppendEntriesReply> AppendEntries(Protocol.AppendEntriesRequest request, ServerCallContext context)
         {
-            Logger.Debug($"Append entries received from: {request.LeaderId}");
+            if (request.Entries.Count > 0)
+            {
+                Logger.Debug($"Append entries received from: {request.LeaderId}");
+            }
+
+            using var _ = Cluster.Node.Lock();
 
             // Reply false if term < currentTerm (§5.1)
-            if (Cluster.Node.PersistentState.CurrentTerm > request.Term)
+            if (request.Term < Cluster.Node.PersistentState.CurrentTerm)
             {
                 return Task.FromResult(new Protocol.AppendEntriesReply
                 {
@@ -99,7 +131,9 @@ namespace Lighthouse
             //
             else if (request.Term > Cluster.Node.PersistentState.CurrentTerm)
             {
+                Logger.Debug($"Learned term {request.Term} > {Cluster.Node.PersistentState.CurrentTerm}");
                 Cluster.Node.PersistentState.CurrentTerm = request.Term;
+                Cluster.Node.PersistentState.VotedFor = null;
                 Cluster.Node.Role = Role.Follower;
             }
 
@@ -148,6 +182,8 @@ namespace Lighthouse
                     // TODO: apply log to state machine here and set lastApplied
                 }
             }
+
+            Cluster.ResetElectionTimer();
 
             return Task.FromResult(new Protocol.AppendEntriesReply()
             {

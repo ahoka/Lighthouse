@@ -5,10 +5,10 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
 WORKDIR /src
-COPY ["Lighthouse.Standalone/Lighthouse.Standalone.csproj", "Lighthouse.Standalone/"]
-RUN dotnet restore "Lighthouse.Standalone/Lighthouse.Standalone.csproj"
 COPY ["Lighthouse/Lighthouse.csproj", "Lighthouse/"]
+COPY ["Lighthouse.Standalone/Lighthouse.Standalone.csproj", "Lighthouse.Standalone/"]
 RUN dotnet restore "Lighthouse/Lighthouse.csproj"
+RUN dotnet restore "Lighthouse.Standalone/Lighthouse.Standalone.csproj"
 COPY . .
 WORKDIR "/src/Lighthouse.Standalone"
 RUN dotnet build "Lighthouse.Standalone.csproj" -c Release -o /app/build

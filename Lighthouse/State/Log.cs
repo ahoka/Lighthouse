@@ -12,9 +12,9 @@ namespace Lighthouse.State
         private List<LogEntry> Entries { get; }
         private ReaderWriterLockSlim Lock { get; }
 
-        public ulong LastIndex => (ulong)(Entries.Count - 1);
+        public ulong LastLogIndex => (ulong)(Entries.Count - 1);
 
-        public ulong LastIndexTerm => Entries.Count == 0 ? 0 : Get(LastIndex).Term;
+        public ulong LastLogTerm => Entries.Count == 0 ? 0 : Get(LastLogIndex).Term;
 
         public Log()
         {

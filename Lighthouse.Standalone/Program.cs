@@ -18,7 +18,8 @@ namespace Lighthouse.Standalone
         {
             var logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
-                .WriteTo.Console()
+                .WriteTo.Console(outputTemplate:
+                    "[{Timestamp:HH:mm:ss.ffff} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .CreateLogger();
 
             var configuration = new RaftConfiguration()
